@@ -59,6 +59,7 @@ impl Agent {
             } else {
                 response
             };
+            println!("[Response] {}", response);
             self.messages.push(("model", response.clone()));
             let response = self.parse_response(&response);
             // println!("[Parsed Response] {:?}", response);
@@ -78,10 +79,14 @@ impl Agent {
                         println!("[Reason] {}", reason);
                     }
                     TaskPart::FileRead(file_read) => {
-                        let content = std::fs::read_to_string(file_read.path).unwrap();
                         println!("[File read] {}", file_read.path);
-                        let content = content.lines().enumerate().map(|(line_number, line)| format!("{}: {}", line_number + 1, line)).collect::<Vec<String>>().join("\n");
-                        user_response.push_str(&format!("The content of the file `{}` is:\n```\n{}\n```", file_read.path, content));
+                        if let Ok(content) = std::fs::read_to_string(file_read.path) {
+                            let content = content.lines().enumerate().map(|(line_number, line)| format!("{}: {}", line_number + 1, line)).collect::<Vec<String>>().join("\n");
+                            println!("[Content] {}", content);
+                            user_response.push_str(&format!("The content of the file `{}` is:\n```\n{}\n```", file_read.path, content));
+                        } else {
+                            user_response.push_str(&format!("The file `{}` does not exist.", file_read.path));
+                        }
                     }
                     TaskPart::FileWriteAdd(file_write_add) => {
                         println!("[FileWriteAdd] {}", file_write_add.path);
@@ -96,6 +101,9 @@ impl Agent {
                     }
                     TaskPart::FileWriteReplace(file_write_replace) => {
                         println!("[FileWriteReplace] {}", file_write_replace.path);
+                        println!("[Content] {}", file_write_replace.content);
+                        println!("[Start] {}", file_write_replace.start);
+                        println!("[End] {}", file_write_replace.end);
                         let content = std::fs::read_to_string(file_write_replace.path).unwrap();
                         let mut lines = content.lines().collect::<Vec<_>>();
                         let start = file_write_replace.start as usize;
