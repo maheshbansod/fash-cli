@@ -106,7 +106,11 @@ impl Agent {
                         println!("[End] {}", file_write_replace.end);
                         let content = std::fs::read_to_string(file_write_replace.path).unwrap();
                         let mut lines = content.lines().collect::<Vec<_>>();
-                        let start = file_write_replace.start as usize - 1;
+                        let start = if file_write_replace.start == 0 {
+                            0
+                        } else {
+                            file_write_replace.start as usize - 1
+                        };
                         let end = file_write_replace.end as usize;
                         lines.drain(start..end);
                         lines.insert(start, file_write_replace.content);
@@ -123,7 +127,8 @@ impl Agent {
             if !user_response.is_empty() {
                 self.messages.push(("user", user_response));
             } else {
-                self.messages.push(("user", "Please continue, use any command/tags whatever you need to".to_string()));
+                self.messages.push(("user", "Please continue, use any command/tags whatever you need to. Choose the sanest option.
+                You might be missing something. Ensure you have the info about the environment that you need".to_string()));
             }
         }
         Ok(())
@@ -160,7 +165,7 @@ impl Agent {
 
         l-file-write-replace allows a few inner tags:
            l-fw-path: The file path
-           l-fw-start: The line number before which to start replacing. (use 0 to replace at the start of file)
+           l-fw-start: The line number before which to start replacing. (use 1 to replace from the start of file)
            l-fw-end: The line number on which to end replacing.
            l-fw-content: The content to write and replace the existing content with.
 
@@ -183,10 +188,10 @@ impl Agent {
         Start your response with reasoning within the reason tag.
         If it's a task, you need to follow the following steps for reasoning:
         1. Analyze the task and the user's request or analyze how you want to overcome the limitations that you might have listed down.
-            1.1 The user always makes sense so try to find out what they mean by gaining more information - you can use commands to get more information
+            1.1 In case of doubts, rethink the task and what the user implies by their request. You can assume the user is smart and knows what they are talking about.
             1.2 Think of what you're about to do and whether that makes sense from the user's perspective.
                 The first thing you can always try in case of doubts is to see what files are there that you can read or run arbitrary commands to gain information.
-        2. Break down the task into smaller steps
+        2. Break down the task into smaller steps. Ensure you think about the task's details like what line numbers you need to work with, what command to run, etc
         3. Pick up the next step that's not yet completed and decide what you need to do to complete it.
         4. Think of any limitations in the task and in the current step
         5. List ways to overcome the limitations
