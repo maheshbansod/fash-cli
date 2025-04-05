@@ -2,6 +2,7 @@ mod config;
 mod cli;
 mod gemini;
 mod agent;
+mod parser;
 
 use clap::Parser;
 use crate::cli::Args;
@@ -21,10 +22,9 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .expect("Please set GEMINI_API_KEY in your .env file");
 
     // Initialize agent and run task
-    let agent = Agent::new(api_key);
-    let response = agent.run(&task).await?;
+    let mut agent = Agent::new(api_key);
+    agent.run(&task).await?;
     
-    println!("\nGemini's response:\n{}", response);
 
     Ok(())
 }

@@ -15,7 +15,7 @@ impl GeminiClient {
         }
     }
 
-    pub async fn generate_content(&self, task: &str, system_prompt: &str) -> Result<String, Box<dyn Error>> {
+    pub async fn generate_content(&self, messages: &[(&str, String)], system_prompt: &str) -> Result<String, Box<dyn Error>> {
         let response = self.client
             .post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")
             .query(&[("key", &self.api_key)])
@@ -25,11 +25,19 @@ impl GeminiClient {
                         "text": system_prompt
                     }]
                 },
-                "contents": [{
+                "contents": messages.iter().map(|(role, content)| json!({
+                    "role": role,
                     "parts": [{
-                        "text": task
+                        "text": content
                     }]
-                }]
+                })).collect::<Vec<_>>()
+                // "contents": [
+                //     {
+                //         "parts": [{
+                //             "text": messages.join("\n")
+                //         }]
+                //     }
+                // ]
             }))
             .send()
             .await?;
