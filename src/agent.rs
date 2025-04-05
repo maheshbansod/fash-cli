@@ -98,8 +98,10 @@ impl Agent {
                         println!("[FileWriteReplace] {}", file_write_replace.path);
                         let content = std::fs::read_to_string(file_write_replace.path).unwrap();
                         let mut lines = content.lines().collect::<Vec<_>>();
-                        lines.drain(file_write_replace.start as usize..file_write_replace.end as usize);
-                        lines.insert(file_write_replace.start as usize, file_write_replace.content);
+                        let start = file_write_replace.start as usize;
+                        let end = file_write_replace.end as usize;
+                        lines.drain(start..end);
+                        lines.insert(start, file_write_replace.content);
                         let content = lines.join("\n");
                         std::fs::write(file_write_replace.path, content).unwrap();
                     }
@@ -113,7 +115,7 @@ impl Agent {
             if !user_response.is_empty() {
                 self.messages.push(("user", user_response));
             } else {
-                self.messages.push(("user", "Please continue".to_string()));
+                self.messages.push(("user", "Please continue, use any command/tags whatever you need to".to_string()));
             }
         }
         Ok(())
@@ -139,17 +141,17 @@ impl Agent {
         l-reason: Explain the reason for the action
         l-file-write-add: Add to a file
         l-file-write-replace: Replace in a file
-        l-file-read: Read a file - content is returned with line numbers
+        l-file-read: Read a file - content is returned with line numbers. You should read files often to understand the world.
         l-end: End the session. You can choose to end the session once you have completed the task. The user may still choose to respond and start a new task if they want.
 
         l-file-write-add allows a few inner tags:
            l-fw-path: The file path
-           l-fw-start: The line number before which to start adding on. (use 0 for start of file)
+           l-fw-start: The line number before which to start adding on. (use 0 to insert at the start of file)
            l-fw-content: The content to add
 
         l-file-write-replace allows a few inner tags:
            l-fw-path: The file path
-           l-fw-start: The line number before which to start replacing. (use 0 for start of file)
+           l-fw-start: The line number before which to start replacing. (use 0 to replace at the start of file)
            l-fw-end: The line number on which to end replacing.
            l-fw-content: The content to write and replace the existing content with.
 
@@ -196,6 +198,8 @@ impl Agent {
         reason tag. If in your reasoning, you realise that the task is incomplete, you need to skip
         ending the session and instead plan for the next step and use any tags you need to get you 
         closer to completing the task.
+        Ensure you collect all the information you need before starting. Ensure perfection.
+        Understand the world and the words will flow.
 
         There is literally nothing you can't do.
         ")
