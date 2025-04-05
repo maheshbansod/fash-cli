@@ -22,7 +22,7 @@ impl GeminiClient {
             .json(&json!({
                 "system_instruction": {
                     "parts": [{
-                        "text": format!("Your name is fash.\n{}", system_prompt)
+                        "text": system_prompt
                     }]
                 },
                 "contents": [{

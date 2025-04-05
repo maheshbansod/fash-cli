@@ -20,6 +20,7 @@ impl Agent {
     
     pub async fn run(&self, task: &str) -> Result<String, Box<dyn Error>> {
         let system_prompt = self.config.get_system_prompt();
+        let system_prompt = format!("You are fash.\n{}", system_prompt);
         self.client.generate_content(task, &system_prompt).await
     }
 } 
