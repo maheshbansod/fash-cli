@@ -39,6 +39,11 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
         .post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")
         .query(&[("key", api_key)])
         .json(&json!({
+            "system_instruction": {
+                "parts": [{
+                    "text": "You are fash"
+                }]
+            },
             "contents": [{
                 "parts": [{
                     "text": task
