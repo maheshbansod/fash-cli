@@ -32,15 +32,18 @@ impl Agent {
             ("user","Respond with yes if you are ready.".to_string()),
             ("model", "
             <l-reason>
-            I am ready to start the task.
+            It's a simple question. I am ready to start the task.
             </l-reason>
             <l-message>
             yes
             </l-message>
+            <l-reason>
+            The user asked a simple question and I have fully answered it so I can end the session.
+            </l-reason>
             <l-end></l-end>".to_string()),
             ("user", task.to_string()),
         ];
-        let system_prompt = format!("Your name is fash.\n{}\n\n{}", system_prompt, response_format);
+        let system_prompt = format!("Your name is fash. You are an autonomous agent that will be run ina terminal with very limited user interaction.\n{}\n\n{}", system_prompt, response_format);
         let mut should_exit = false;
         while !should_exit {
             let response = self.client.generate_content(&self.messages, &system_prompt).await?;
@@ -71,8 +74,8 @@ impl Agent {
                     TaskPart::Message(message) => {
                         println!("[Message] {}", message);
                     }
-                    TaskPart::Reason(_reason) => {
-                        // println!("[Reason] {}", reason);
+                    TaskPart::Reason(reason) => {
+                        println!("[Reason] {}", reason);
                     }
                     TaskPart::FileRead(file_read) => {
                         let content = std::fs::read_to_string(file_read.path).unwrap();
@@ -80,14 +83,26 @@ impl Agent {
                         let content = content.lines().enumerate().map(|(line_number, line)| format!("{}: {}", line_number + 1, line)).collect::<Vec<String>>().join("\n");
                         user_response.push_str(&format!("The content of the file `{}` is:\n```\n{}\n```", file_read.path, content));
                     }
-                    // TaskPart::FileWriteAdd(file_write_add) => {
-                    //     let content = std::fs::read_to_string(file_write_add.path).unwrap();
-                    //     println!("[FileWriteAdd] {}", content);
-                    // }
-                    // TaskPart::FileWriteReplace(file_write_replace) => {
-                    //     let content = std::fs::read_to_string(file_write_replace.path).unwrap();
-                    //     println!("[FileWriteReplace] {}", content);
-                    // }
+                    TaskPart::FileWriteAdd(file_write_add) => {
+                        println!("[FileWriteAdd] {}", file_write_add.path);
+                        if let Ok(content) = std::fs::read_to_string(file_write_add.path) {
+                            let mut lines = content.lines().collect::<Vec<_>>();
+                            lines.insert(file_write_add.start as usize, file_write_add.content);
+                            let content = lines.join("\n");
+                            std::fs::write(file_write_add.path, content).unwrap();
+                        } else {
+                            std::fs::write(file_write_add.path, file_write_add.content).unwrap();
+                        }
+                    }
+                    TaskPart::FileWriteReplace(file_write_replace) => {
+                        println!("[FileWriteReplace] {}", file_write_replace.path);
+                        let content = std::fs::read_to_string(file_write_replace.path).unwrap();
+                        let mut lines = content.lines().collect::<Vec<_>>();
+                        lines.drain(file_write_replace.start as usize..file_write_replace.end as usize);
+                        lines.insert(file_write_replace.start as usize, file_write_replace.content);
+                        let content = lines.join("\n");
+                        std::fs::write(file_write_replace.path, content).unwrap();
+                    }
                     TaskPart::End => {
                         println!("[End] Ending session");
                         should_exit = true;
@@ -120,7 +135,7 @@ impl Agent {
         Respond in the following special format meant for fash. It's not XML or HTML or Markdown.
         You can use only the following tags at the top level:
         l-run: Run a command
-        l-message: Send a message
+        l-message: Send a message to the user - this is the only way to communicate with the user
         l-reason: Explain the reason for the action
         l-file-write-add: Add to a file
         l-file-write-replace: Replace in a file
@@ -155,18 +170,34 @@ impl Agent {
 
         Follow this format if you want to be taken seriously.
         Start your response with reasoning within the reason tag.
-        In your reasoning, mention the steps you will take to complete the task.
-        In your reasoning, in the last step, review your reasoning and decide on what you'd like
-        to do so that you can complete the task fully.
-        Every time you communicate with the user, you should start with the detailed reasoning
-        with the reasoning steps so that you can complete the task fully. Every time you
-        need to contemplate whether the task is complete. Then after the reasoning, you should
-        show a message to the user about what you will do next.
-        And one by one, you should do what you said you will do, and showing a message to the 
+        If it's a task, you need to follow the following steps for reasoning:
+        1. Analyze the task and the user's request or analyze how you want to overcome the limitations that you might have listed down.
+        2. Break down the task into smaller steps
+        3. Pick up the next step that's not yet completed and decide what you need to do to complete it.
+        4. Think of any limitations in the task and in the current step
+        5. List ways to overcome the limitations
+
+        One by one, you should do what you said you will do, and showing a message to the 
         user wherever you feel the need.
+        Be very pro-active and take initiative. You need to be the one who drives the task forward.
+        This means you need to get the information you need by yourself and do what you need to do.
+        You will be run in a sandbox environment so feel free to do whatever you need to do.
         You may use any of the tags mentioned above multiple times in your response.
+        Take as much information as you can and provide the best possible response so that it is
+        useful to the user.
 
+        When the task is complete, use the l-message tag to send a message to the user with
+        the result of the task. Then a reason tag.
+        Then use the l-end tag to end the session if the task is complete.
+        If the task is not complete for whatever reason, you need to continue working on the task and
+        reason about what you need to do next.
+        
+        Before you end the session, you need to show a reason for ending the session in the
+        reason tag. If in your reasoning, you realise that the task is incomplete, you need to skip
+        ending the session and instead plan for the next step and use any tags you need to get you 
+        closer to completing the task.
 
+        There is literally nothing you can't do.
         ")
     }
 } 

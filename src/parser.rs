@@ -66,14 +66,57 @@ impl<'a> Parser<'a> {
                     } else if tag_name == "l-fr-path" {
                         file_read.path = self.parse_until_end_tag("l-fr-path");
                     } else {
-                        println!("Unknown tag: {:?}", tag_name);
+                        panic!("Unknown tag: {:?}", tag_name);
                     }
                 }
                 return Some(TaskPart::FileRead(file_read))
             }
+            "l-file-write-add" => {
+                let mut file_write_add = FileWriteAdd { path: "", content: "", start: 0 };
+                loop {
+                    self.consume_whitespace();
+                    self.parse_until(|c| c == '<');
+                    self.char_iterator.next();
+                    let tag_name = self.parse_tag_name();
+                    if tag_name == "/l-file-write-add" {
+                        break;
+                    } else if tag_name == "l-fw-path" {
+                        file_write_add.path = self.parse_until_end_tag("l-fw-path");
+                    } else if tag_name == "l-fw-start" {
+                        file_write_add.start = self.parse_until_end_tag("l-fw-start").parse::<u32>().unwrap();
+                    } else if tag_name == "l-fw-content" {
+                        file_write_add.content = self.parse_until_end_tag("l-fw-content");
+                    } else {
+                        panic!("Unknown tag: {:?}", tag_name);
+                    }
+                }
+                return Some(TaskPart::FileWriteAdd(file_write_add))
+            }
+            "l-file-write-replace" => {
+                let mut file_write_replace = FileWriteReplace { path: "", content: "", start: 0, end: 0 };
+                loop {
+                    self.consume_whitespace();
+                    self.parse_until(|c| c == '<');
+                    self.char_iterator.next();
+                    let tag_name = self.parse_tag_name();
+                    if tag_name == "/l-file-write-replace" {
+                        break;
+                    } else if tag_name == "l-fw-path" {
+                        file_write_replace.path = self.parse_until_end_tag("l-fw-path");
+                    } else if tag_name == "l-fw-start" {
+                        file_write_replace.start = self.parse_until_end_tag("l-fw-start").parse::<u32>().unwrap();
+                    } else if tag_name == "l-fw-end" {
+                        file_write_replace.end = self.parse_until_end_tag("l-fw-end").parse::<u32>().unwrap();
+                    } else if tag_name == "l-fw-content" {
+                        file_write_replace.content = self.parse_until_end_tag("l-fw-content");
+                    } else {
+                        panic!("Unknown tag: {:?}", tag_name);
+                    }
+                }
+                return Some(TaskPart::FileWriteReplace(file_write_replace))
+            }
             _ => {
-                println!("Unknown tag: {:?}", tag_name);
-                return None;
+                panic!("Unknown tag: {:?}", tag_name);
             }
         }
     }
@@ -130,17 +173,17 @@ pub enum TaskPart<'a> {
 
 #[derive(Debug)]
 pub struct FileWriteAdd<'a> {
-    path: &'a str,
-    content: &'a str,
-    start: u32,
+    pub path: &'a str,
+    pub content: &'a str,
+    pub start: u32,
 }
 
 #[derive(Debug)]
 pub struct FileWriteReplace<'a> {
-    path: &'a str,
-    content: &'a str,
-    start: u32,
-    end: u32,
+    pub path: &'a str,
+    pub content: &'a str,
+    pub start: u32,
+    pub end: u32,
 }
 
 #[derive(Debug)]
