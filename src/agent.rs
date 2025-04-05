@@ -202,6 +202,8 @@ impl Agent {
         Ensure you collect all the information you need before starting. Ensure perfection.
         Understand the world and the words will flow.
 
+        You can check the README.md file of a project to understand a project.
+
         There is literally nothing you can't do.
         ")
     }
