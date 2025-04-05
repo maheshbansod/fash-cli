@@ -28,3 +28,9 @@ The agent requires a Gemini API key to be configured. This can be done through e
 ### Usage
 
 The agent is a command-line application. To run it, use the command-line interface, providing the task as an argument. Use the `--help` flag for usage instructions.
+
+```bash
+cargo run -- --task "Write a simple hello world program in Rust"
+```
+
+
