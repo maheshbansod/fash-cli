@@ -41,7 +41,7 @@ impl Agent {
             The user asked a simple question and I have fully answered it so I can end the session.
             </l-reason>
             <l-end></l-end>".to_string()),
-            ("user", task.to_string()),
+            ("user", format!("The task is: {}", task)),
         ];
         let system_prompt = format!("Your name is fash. You are an autonomous agent that will be run ina terminal with very limited user interaction.\n{}\n\n{}", system_prompt, response_format);
         let mut should_exit = false;
@@ -129,6 +129,7 @@ impl Agent {
     fn response_format(&self) -> String {
         format!("
 
+        The user is another agent that forwards you the task.
         You need to complete the task provided by the user.
         To do so, you may need to run commands, read files, write to files, or send messages to the user.
         The user will respond with the result of the commands you run, the content of the files you read, and the messages you send
