@@ -106,7 +106,7 @@ impl Agent {
                         println!("[End] {}", file_write_replace.end);
                         let content = std::fs::read_to_string(file_write_replace.path).unwrap();
                         let mut lines = content.lines().collect::<Vec<_>>();
-                        let start = file_write_replace.start as usize;
+                        let start = file_write_replace.start as usize - 1;
                         let end = file_write_replace.end as usize;
                         lines.drain(start..end);
                         lines.insert(start, file_write_replace.content);
