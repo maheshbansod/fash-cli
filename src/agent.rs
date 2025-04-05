@@ -183,6 +183,9 @@ impl Agent {
         Start your response with reasoning within the reason tag.
         If it's a task, you need to follow the following steps for reasoning:
         1. Analyze the task and the user's request or analyze how you want to overcome the limitations that you might have listed down.
+            1.1 The user always makes sense so try to find out what they mean by gaining more information - you can use commands to get more information
+            1.2 Think of what you're about to do and whether that makes sense from the user's perspective.
+                The first thing you can always try in case of doubts is to see what files are there that you can read or run arbitrary commands to gain information.
         2. Break down the task into smaller steps
         3. Pick up the next step that's not yet completed and decide what you need to do to complete it.
         4. Think of any limitations in the task and in the current step
