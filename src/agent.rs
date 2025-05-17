@@ -29,18 +29,18 @@ impl Agent {
         let system_prompt = self.config.get_system_prompt();
         let response_format = self.response_format();
         self.messages = vec![
-            ("user","Respond with yes if you are ready.".to_string()),
-            ("model", "
-            <l-reason>
-            It's a simple question. I am ready to start the task.
-            </l-reason>
-            <l-message>
-            yes
-            </l-message>
-            <l-reason>
-            The user asked a simple question and I have fully answered it so I can end the session.
-            </l-reason>
-            <l-end></l-end>".to_string()),
+            // ("user","Respond with yes if you are ready.".to_string()),
+            // ("model", "
+            // <l-reason>
+            // It's a simple question. I am ready to start the task.
+            // </l-reason>
+            // <l-message>
+            // yes
+            // </l-message>
+            // <l-reason>
+            // The user asked a simple question and I have fully answered it so I can end the session.
+            // </l-reason>
+            // <l-end></l-end>".to_string()),
             ("user", format!("The task is: {}", task)),
         ];
         let system_prompt = format!("Your name is fash. You are an autonomous agent that will be run in a terminal with very limited user interaction.\n{}\n\n{}", system_prompt, response_format);
@@ -49,8 +49,13 @@ impl Agent {
             let response = self.client.generate_content(&self.messages, &system_prompt).await?;
             // println!("[Response] {}", response);
             // remove the first line of response if it starts with ``` and also remove the last ``` in the response
+            let response = if response.starts_with("```json") {
+                response[7..].to_string()
+            } else {
+                response
+            };
             let response = if response.starts_with("```") {
-                response[1..].to_string()
+                response[3..].to_string()
             } else {
                 response
             };
@@ -62,63 +67,59 @@ impl Agent {
             println!("[Response] {}", response);
             self.messages.push(("model", response.clone()));
             let response = self.parse_response(&response);
-            // println!("[Parsed Response] {:?}", response);
             let mut user_response = String::new();
             for part in response {
                 match part {
-                    TaskPart::Run(command) => {
-                        let output = Command::new("sh").arg("-c").arg(command).output().await?;
+                    TaskPart::Run {command} => {
+                        let output = Command::new("sh").arg("-c").arg(command.clone()).output().await?;
                         let command_output = String::from_utf8(output.stdout).unwrap();
                         println!("[Run] {}", command);
                         user_response.push_str(&format!("The output of the command `{}` is:\n```\n{}\n```", command, command_output));
                     }
-                    TaskPart::Message(message) => {
-                        println!("[Message] {}", message);
+                    TaskPart::Message { text } => {
+                        println!("[Message] {}", text);
                     }
-                    TaskPart::Reason(reason) => {
-                        println!("[Reason] {}", reason);
+                    TaskPart::Reason { text } => {
+                        println!("[Reason] {}", text);
                     }
-                    TaskPart::FileRead(file_read) => {
-                        println!("[File read] {}", file_read.path);
-                        if let Ok(content) = std::fs::read_to_string(file_read.path) {
+                    TaskPart::FileRead {path} => {
+                        println!("[File read] {}", path);
+                        if let Ok(content) = std::fs::read_to_string(path.clone()) {
                             let content = content.lines().enumerate().map(|(line_number, line)| format!("{}: {}", line_number + 1, line)).collect::<Vec<String>>().join("\n");
                             println!("[Content] {}", content);
-                            user_response.push_str(&format!("The content of the file `{}` is:\n```\n{}\n```", file_read.path, content));
+                            user_response.push_str(&format!("The content of the file `{}` is:\n```\n{}\n```", path.clone(), content));
                         } else {
-                            user_response.push_str(&format!("The file `{}` does not exist.", file_read.path));
+                            user_response.push_str(&format!("The file `{}` does not exist.", path.clone()));
                         }
                     }
-                    TaskPart::FileWriteAdd(file_write_add) => {
-                        println!("[FileWriteAdd] {}", file_write_add.path);
-                        if let Ok(content) = std::fs::read_to_string(file_write_add.path) {
+                    TaskPart::FileWriteAdd { path, content, start } => {
+                        println!("[FileWriteAdd] {} at {}", path, start);
+                        if let Ok(content) = std::fs::read_to_string(path.clone()) {
                             let mut lines = content.lines().collect::<Vec<_>>();
-                            lines.insert(file_write_add.start as usize, file_write_add.content);
+                            lines.insert(start as usize, &content);
                             let content = lines.join("\n");
-                            std::fs::write(file_write_add.path, content).unwrap();
+                            std::fs::write(&path.clone(), content).unwrap();
                         } else {
-                            std::fs::write(file_write_add.path, file_write_add.content).unwrap();
+                            std::fs::write(&path.clone(), content.clone()).unwrap();
                         }
                     }
-                    TaskPart::FileWriteReplace(file_write_replace) => {
-                        println!("[FileWriteReplace] {}", file_write_replace.path);
-                        println!("[Content] {}", file_write_replace.content);
-                        println!("[Start] {}", file_write_replace.start);
-                        println!("[End] {}", file_write_replace.end);
-                        let content = std::fs::read_to_string(file_write_replace.path).unwrap();
+                    TaskPart::FileWriteReplace { path, content, start, end } => {
+                        println!("[FileWriteReplace] {} at {} to {}", path, start, end);
+                        let content = std::fs::read_to_string(path.clone()).unwrap();
                         let mut lines = content.lines().collect::<Vec<_>>();
-                        let start = if file_write_replace.start == 0 {
+                        let start = if start == 0 {
                             0
                         } else {
-                            file_write_replace.start as usize - 1
+                            start as usize - 1
                         };
-                        let end = file_write_replace.end as usize;
+                        let end = end as usize;
                         lines.drain(start..end);
-                        lines.insert(start, file_write_replace.content);
+                        lines.insert(start, &content);
                         let content = lines.join("\n");
-                        std::fs::write(file_write_replace.path, content).unwrap();
+                        std::fs::write(&path.clone(), content).unwrap();
                     }
-                    TaskPart::End => {
-                        println!("[End] Ending session");
+                    TaskPart::End { reason } => {
+                        println!("[End] {}", reason);
                         should_exit = true;
                     },
                     _ => todo!()
@@ -134,9 +135,12 @@ impl Agent {
         Ok(())
     }
 
-    fn parse_response<'a>(&self, response: &'a str) -> Vec<TaskPart<'a>> {
-        let mut parser = crate::parser::Parser::new(response);
-        parser.parse()
+    fn parse_response(&self, response: &str) -> Vec<TaskPart> {
+        let response = response.replace("```json", "").replace("```", "");
+        let response = serde_json::from_str::<Vec<TaskPart>>(&response).unwrap();
+        response
+        // let mut parser = crate::parser::Parser::new(response);
+        // parser.parse()
     }
 
     fn response_format(&self) -> String {
@@ -148,44 +152,71 @@ impl Agent {
         The user will respond with the result of the commands you run, the content of the files you read, and the messages you send
         if they deem it necessary to do so.
 
-        Respond in the following special format meant for fash. It's not XML or HTML or Markdown.
-        You can use only the following tags at the top level:
-        l-run: Run a command
-        l-message: Send a message to the user - this is the only way to communicate with the user
-        l-reason: Explain the reason for the action
-        l-file-write-add: Add to a file
-        l-file-write-replace: Replace in a file
-        l-file-read: Read a file - content is returned with line numbers. You should read files often to understand the world.
-        l-end: End the session. You can choose to end the session once you have completed the task. The user may still choose to respond and start a new task if they want.
+        Respond in the following format meant for fash.
+        type Message = Run | Message | Reason | FileWriteAdd | FileWriteReplace | FileRead | End;
+        // Run a command
+        type Run = {{
+            type: 'run',
+            command: String,
+        }};
+        // Send a message to the user
+        type Message = {{
+            type: 'message',
+            text: String,
+        }};
+        // Explain the reason for the action
+        type Reason = {{
+            type: 'reason',
+            text: String,
+        }};
+        // Add to a file
+        type FileWriteAdd = {{
+            type: 'file-write-add',
+            path: String,
+            start: usize,
+            content: String,
+        }};
+        // Replace in a file
+        type FileWriteReplace = {{
+            type: 'file-write-replace',
+            path: String,
+            start: usize,
+            end: usize,
+            content: String,
+        }};
+        // Read a file
+        type FileRead = {{
+            type: 'file-read',
+            path: String,
+        }};
+        // End the session
+        type End = {{
+            type: 'end',
+            reason: String,
+        }};
 
-        l-file-write-add allows a few inner tags:
-           l-fw-path: The file path
-           l-fw-start: The line number before which to start adding on. (use 0 to insert at the start of file)
-           l-fw-content: The content to add
+        For example, to say hello to the user, and write first ten lines from the output of the command `ls -l` to a file, and read the file, you can use:
+        [
+            {{
+                type: 'message',
+                text: 'Hello!',
+            }},
+            {{
+                type: 'run',
+                command: 'ls -l | head -n 10 > hello.txt',
+                output: 'Hello!',
+            }},
+            {{
+                type: 'file-read',
+                path: 'hello.txt',
+            }},
+            {{
+                type: 'end',
+                reason: 'Task complete',
+            }},
+        ]
 
-        l-file-write-replace allows a few inner tags:
-           l-fw-path: The file path
-           l-fw-start: The line number before which to start replacing. (use 1 to replace from the start of file)
-           l-fw-end: The line number on which to end replacing.
-           l-fw-content: The content to write and replace the existing content with.
-
-        l-file-read allows a few inner tags:
-           l-fr-path: The file path
-
-        For example, to say hello to the user, and echo hello in a file, and read the file, you can use:
-        <l-message>
-        Hello!
-        </l-message>
-        <l-file-write-add>
-           <l-fw-path>hello.txt</l-fw-path>
-           <l-fw-content>Hello!</l-fw-content>
-        </l-file-write-add>
-        <l-file-read>
-           <l-fw-path>hello.txt</l-fw-path>
-        </l-file-read>
-
-        Follow this format if you want to be taken seriously.
-        Start your response with reasoning within the reason tag.
+        Start your response with reasoning within the reason field.
         If it's a task, you need to follow the following steps for reasoning:
         1. Analyze the task and the user's request or analyze how you want to overcome the limitations that you might have listed down.
             1.1 In case of doubts, rethink the task and what the user implies by their request. You can assume the user is smart and knows what they are talking about.
@@ -205,14 +236,14 @@ impl Agent {
         Take as much information as you can and provide the best possible response so that it is
         useful to the user.
 
-        When the task is complete, use the l-message tag to send a message to the user with
-        the result of the task. Then a reason tag.
-        Then use the l-end tag to end the session if the task is complete.
+        When the task is complete, use the message field to send a message to the user with
+        the result of the task. Then a reason field.
+        Then use the end field to end the session if the task is complete.
         If the task is not complete for whatever reason, you need to continue working on the task and
         reason about what you need to do next.
         
         Before you end the session, you need to show a reason for ending the session in the
-        reason tag. If in your reasoning, you realise that the task is incomplete, you need to skip
+        reason field. If in your reasoning, you realise that the task is incomplete, you need to skip
         ending the session and instead plan for the next step and use any tags you need to get you 
         closer to completing the task.
         Ensure you collect all the information you need before starting. Ensure perfection.
