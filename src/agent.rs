@@ -18,24 +18,28 @@ impl Agent {
     pub fn new(api_key: String) -> Self {
         let config = Config::load();
         let client = GeminiClient::new(api_key);
-        
+
         Self {
             config,
             client,
             messages: vec![],
         }
     }
-    
+
     pub async fn run(&mut self, task: &str) -> Result<(), Box<dyn Error>> {
         let system_prompt = self.config.get_system_prompt();
         let response_format = self.response_format();
-        self.messages = vec![
-            ("user", format!("The task is: {}", task)),
-        ];
-        let system_prompt = format!("Your name is fash. You are an autonomous agent that will be run in a terminal with very limited user interaction.\n{}\n\n{}", system_prompt, response_format);
+        self.messages = vec![("user", format!("The task is: {}", task))];
+        let system_prompt = format!(
+            "Your name is fash. You are an autonomous agent that will be run in a terminal with very limited user interaction.\n{}\n\n{}",
+            system_prompt, response_format
+        );
         let mut should_exit = false;
         while !should_exit {
-            let response = self.client.generate_content(&self.messages, &system_prompt).await?;
+            let response = self
+                .client
+                .generate_content(&self.messages, &system_prompt)
+                .await?;
             // println!("[Response] {}", response);
             // remove the first line of response if it starts with ``` and also remove the last ``` in the response
             let response = if response.starts_with("```json") {
@@ -59,62 +63,70 @@ impl Agent {
             let mut user_response = String::new();
             for part in response {
                 match part {
-                    TaskPart::Run {command} => {
-use std::io::{BufRead, BufReader};
-use std::process::{Command, Stdio};
+                    TaskPart::Run { command } => {
+                        use std::io::{BufRead, BufReader};
+                        use std::process::{Command, Stdio};
 
-let mut child = Command::new("sh")
-    .arg("-c")
-    .arg(command.clone())
-    .stdin(Stdio::inherit())
-    .stdout(Stdio::piped())
-    .stderr(Stdio::piped())
-    .spawn()?;
+                        let mut child = Command::new("sh")
+                            .arg("-c")
+                            .arg(command.clone())
+                            .stdin(Stdio::inherit())
+                            .stdout(Stdio::piped())
+                            .stderr(Stdio::piped())
+                            .spawn()?;
 
-let stdout = child.stdout.take().unwrap();
-let stderr = child.stderr.take().unwrap();
+                        let stdout = child.stdout.take().unwrap();
+                        let stderr = child.stderr.take().unwrap();
 
-let mut output = String::new();
-let mut error = String::new();
+                        let mut output = String::new();
+                        let mut error = String::new();
 
-// Read stdout
-let stdout_handle = std::thread::spawn({
-    let mut out = output.clone();
-    move || {
-        let reader = BufReader::new(stdout);
-        for line in reader.lines() {
-            let line = line.unwrap();
-            println!("{}", line);
-            out.push_str(&line);
-            out.push('\n');
-        }
-        out
-    }
-});
+                        // Read stdout
+                        let stdout_handle = std::thread::spawn({
+                            let mut out = output.clone();
+                            move || {
+                                let reader = BufReader::new(stdout);
+                                for line in reader.lines() {
+                                    let line = line.unwrap();
+                                    println!("{}", line);
+                                    out.push_str(&line);
+                                    out.push('\n');
+                                }
+                                out
+                            }
+                        });
 
-// Read stderr
-let stderr_handle = std::thread::spawn({
-    let mut err = error.clone();
-    move || {
-        let reader = BufReader::new(stderr);
-        for line in reader.lines() {
-            let line = line.unwrap();
-            eprintln!("{}", line);
-            err.push_str(&line);
-            err.push('\n');
-        }
-        err
-    }
-});
+                        // Read stderr
+                        let stderr_handle = std::thread::spawn({
+                            let mut err = error.clone();
+                            move || {
+                                let reader = BufReader::new(stderr);
+                                for line in reader.lines() {
+                                    let line = line.unwrap();
+                                    eprintln!("{}", line);
+                                    err.push_str(&line);
+                                    err.push('\n');
+                                }
+                                err
+                            }
+                        });
 
-let status = child.wait()?;
-let output = stdout_handle.join().unwrap();
-let error = stderr_handle.join().unwrap();
+                        let status = child.wait()?;
+                        let output = stdout_handle.join().unwrap();
+                        let error = stderr_handle.join().unwrap();
 
-                        user_response.push_str(&format!("The output of the command `{}` is:\n```\n{}\n```", command, output));
-                        user_response.push_str(&format!("The error of the command `{}` is:\n```\n{}\n```", command, error));
-                        user_response.push_str(&format!("The status of the command `{}` is:\n```\n{}\n```", command, status));
-
+                        user_response.push_str(&format!(
+                            "The output of the command `{}` is:\n```\n{}\n```",
+                            command, output
+                        ));
+                        user_response.push_str(&format!(
+                            "The error of the command `{}` is:\n```\n{}\n```",
+                            command, error
+                        ));
+                        user_response.push_str(&format!(
+                            "The status of the command `{}` is:\n```\n{}\n```",
+                            command, status
+                        ));
                     }
                     TaskPart::Message { text } => {
                         println!("[Message] {}", text);
@@ -122,17 +134,31 @@ let error = stderr_handle.join().unwrap();
                     TaskPart::Reason { text } => {
                         println!("[Reason] {}", text);
                     }
-                    TaskPart::FileRead {path} => {
+                    TaskPart::FileRead { path } => {
                         println!("[File read] {}", path);
                         if let Ok(content) = std::fs::read_to_string(path.clone()) {
-                            let content = content.lines().enumerate().map(|(line_number, line)| format!("{}: {}", line_number + 1, line)).collect::<Vec<String>>().join("\n");
+                            let content = content
+                                .lines()
+                                .enumerate()
+                                .map(|(line_number, line)| format!("{}: {}", line_number + 1, line))
+                                .collect::<Vec<String>>()
+                                .join("\n");
                             println!("[Content] {}", content);
-                            user_response.push_str(&format!("The content of the file `{}` is:\n```\n{}\n```", path.clone(), content));
+                            user_response.push_str(&format!(
+                                "The content of the file `{}` is:\n```\n{}\n```",
+                                path.clone(),
+                                content
+                            ));
                         } else {
-                            user_response.push_str(&format!("The file `{}` does not exist.", path.clone()));
+                            user_response
+                                .push_str(&format!("The file `{}` does not exist.", path.clone()));
                         }
                     }
-                    TaskPart::FileWriteAdd { path, content, start } => {
+                    TaskPart::FileWriteAdd {
+                        path,
+                        content,
+                        start,
+                    } => {
                         println!("[FileWriteAdd] {} at {}", path, start);
                         if let Ok(file_content) = std::fs::read_to_string(path.clone()) {
                             let mut lines = file_content.lines().collect::<Vec<_>>();
@@ -143,15 +169,16 @@ let error = stderr_handle.join().unwrap();
                             std::fs::write(&path.clone(), content.clone()).unwrap();
                         }
                     }
-                    TaskPart::FileWriteReplace { path, content, start, end } => {
+                    TaskPart::FileWriteReplace {
+                        path,
+                        content,
+                        start,
+                        end,
+                    } => {
                         println!("[FileWriteReplace] {} at {} to {}", path, start, end);
                         let file_content = std::fs::read_to_string(path.clone()).unwrap();
                         let mut lines = file_content.lines().collect::<Vec<_>>();
-                        let start = if start == 0 {
-                            0
-                        } else {
-                            start as usize - 1
-                        };
+                        let start = if start == 0 { 0 } else { start as usize - 1 };
                         let end = end as usize;
                         lines.drain(start..end);
                         lines.insert(start, &content);
@@ -161,8 +188,8 @@ let error = stderr_handle.join().unwrap();
                     TaskPart::End { reason } => {
                         println!("[End] {}", reason);
                         should_exit = true;
-                    },
-                    _ => todo!()
+                    }
+                    _ => todo!(),
                 }
             }
             if !user_response.is_empty() {
@@ -293,4 +320,4 @@ let error = stderr_handle.join().unwrap();
         There is literally nothing you can't do.
         ")
     }
-} 
+}

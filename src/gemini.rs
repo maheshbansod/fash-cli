@@ -15,7 +15,11 @@ impl GeminiClient {
         }
     }
 
-    pub async fn generate_content(&self, messages: &[(&str, String)], system_prompt: &str) -> Result<String, Box<dyn Error>> {
+    pub async fn generate_content(
+        &self,
+        messages: &[(&str, String)],
+        system_prompt: &str,
+    ) -> Result<String, Box<dyn Error>> {
         let response = self.client
             .post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")
             .query(&[("key", &self.api_key)])
@@ -46,7 +50,7 @@ impl GeminiClient {
             .await?;
 
         let result = response.json::<serde_json::Value>().await?;
-        
+
         let text = result
             .get("candidates")
             .and_then(|c| c.get(0))
@@ -62,4 +66,4 @@ impl GeminiClient {
 
         Ok(text.to_string())
     }
-} 
+}

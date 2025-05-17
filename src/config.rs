@@ -17,8 +17,8 @@ pub struct SystemPrompt {
 
 impl Config {
     pub fn load() -> Self {
-        let proj_dirs = directories::ProjectDirs::from("com", ORG_NAME, APP_NAME)
-            .unwrap_or_else(|| {
+        let proj_dirs =
+            directories::ProjectDirs::from("com", ORG_NAME, APP_NAME).unwrap_or_else(|| {
                 eprintln!("Warning: Could not determine config directory, using defaults");
                 return directories::ProjectDirs::from("com", ORG_NAME, APP_NAME)
                     .expect("Failed to create default config directory");
@@ -59,4 +59,4 @@ impl Config {
         // Default system prompt
         "You are a helpful AI assistant.".to_string()
     }
-} 
+}
