@@ -160,6 +160,7 @@ impl Agent {
                         start,
                     } => {
                         println!("[FileWriteAdd] {} at {}", path, start);
+                        println!("[Content] {}", content);
                         if let Ok(file_content) = std::fs::read_to_string(path.clone()) {
                             let mut lines = file_content.lines().collect::<Vec<_>>();
                             lines.insert(start as usize, &content);
@@ -176,6 +177,7 @@ impl Agent {
                         end,
                     } => {
                         println!("[FileWriteReplace] {} at {} to {}", path, start, end);
+                        println!("[Content] {}", content);
                         let file_content = std::fs::read_to_string(path.clone()).unwrap();
                         let mut lines = file_content.lines().collect::<Vec<_>>();
                         let start = if start == 0 { 0 } else { start as usize - 1 };
@@ -217,6 +219,8 @@ impl Agent {
         The user will respond with the result of the commands you run, the content of the files you read, and the messages you send
         if they deem it necessary to do so.
         While writing to files, use line numbers that you see when you read the file.
+        Also, when writing files, every message related to writing could change the line numbers, so the next message should
+        ensure that the line numbers are correct and updated based on the content written in previous messages.
 
         Respond in the following format meant for fash.
         type Message = Run | Message | Reason | FileWriteAdd | FileWriteReplace | FileRead | End;
