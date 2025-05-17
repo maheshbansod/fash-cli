@@ -184,7 +184,7 @@ impl Agent {
             end: usize,
             content: String,
         }};
-        // Read a file
+        // Read a file - will return the content of the file along with line numbers
         type FileRead = {{
             type: 'file-read',
             path: String,
