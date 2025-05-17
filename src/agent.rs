@@ -151,6 +151,7 @@ impl Agent {
         To do so, you may need to run commands, read files, write to files, or send messages to the user.
         The user will respond with the result of the commands you run, the content of the files you read, and the messages you send
         if they deem it necessary to do so.
+        While writing to files, use line numbers that you see when you read the file.
 
         Respond in the following format meant for fash.
         type Message = Run | Message | Reason | FileWriteAdd | FileWriteReplace | FileRead | End;
