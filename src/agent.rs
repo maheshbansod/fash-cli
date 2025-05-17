@@ -94,8 +94,8 @@ impl Agent {
                     }
                     TaskPart::FileWriteAdd { path, content, start } => {
                         println!("[FileWriteAdd] {} at {}", path, start);
-                        if let Ok(content) = std::fs::read_to_string(path.clone()) {
-                            let mut lines = content.lines().collect::<Vec<_>>();
+                        if let Ok(file_content) = std::fs::read_to_string(path.clone()) {
+                            let mut lines = file_content.lines().collect::<Vec<_>>();
                             lines.insert(start as usize, &content);
                             let content = lines.join("\n");
                             std::fs::write(&path.clone(), content).unwrap();
@@ -105,8 +105,8 @@ impl Agent {
                     }
                     TaskPart::FileWriteReplace { path, content, start, end } => {
                         println!("[FileWriteReplace] {} at {} to {}", path, start, end);
-                        let content = std::fs::read_to_string(path.clone()).unwrap();
-                        let mut lines = content.lines().collect::<Vec<_>>();
+                        let file_content = std::fs::read_to_string(path.clone()).unwrap();
+                        let mut lines = file_content.lines().collect::<Vec<_>>();
                         let start = if start == 0 {
                             0
                         } else {
