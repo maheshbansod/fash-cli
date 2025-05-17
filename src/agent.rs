@@ -43,7 +43,7 @@ impl Agent {
             <l-end></l-end>".to_string()),
             ("user", format!("The task is: {}", task)),
         ];
-        let system_prompt = format!("Your name is fash. You are an autonomous agent that will be run ina terminal with very limited user interaction.\n{}\n\n{}", system_prompt, response_format);
+        let system_prompt = format!("Your name is fash. You are an autonomous agent that will be run in a terminal with very limited user interaction.\n{}\n\n{}", system_prompt, response_format);
         let mut should_exit = false;
         while !should_exit {
             let response = self.client.generate_content(&self.messages, &system_prompt).await?;
