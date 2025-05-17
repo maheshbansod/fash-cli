@@ -3,7 +3,7 @@ use tokio::process::Command;
 
 use crate::config::Config;
 use crate::gemini::GeminiClient;
-use crate::parser::TaskPart;
+use crate::task_part::TaskPart;
 
 type Message = (&'static str, String);
 
@@ -29,18 +29,6 @@ impl Agent {
         let system_prompt = self.config.get_system_prompt();
         let response_format = self.response_format();
         self.messages = vec![
-            // ("user","Respond with yes if you are ready.".to_string()),
-            // ("model", "
-            // <l-reason>
-            // It's a simple question. I am ready to start the task.
-            // </l-reason>
-            // <l-message>
-            // yes
-            // </l-message>
-            // <l-reason>
-            // The user asked a simple question and I have fully answered it so I can end the session.
-            // </l-reason>
-            // <l-end></l-end>".to_string()),
             ("user", format!("The task is: {}", task)),
         ];
         let system_prompt = format!("Your name is fash. You are an autonomous agent that will be run in a terminal with very limited user interaction.\n{}\n\n{}", system_prompt, response_format);
@@ -139,8 +127,6 @@ impl Agent {
         let response = response.replace("```json", "").replace("```", "");
         let response = serde_json::from_str::<Vec<TaskPart>>(&response).unwrap();
         response
-        // let mut parser = crate::parser::Parser::new(response);
-        // parser.parse()
     }
 
     fn response_format(&self) -> String {
