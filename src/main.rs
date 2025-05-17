@@ -2,7 +2,7 @@ mod config;
 mod cli;
 mod gemini;
 mod agent;
-mod parser;
+mod task_part;
 
 use clap::Parser;
 use crate::cli::Args;

@@ -20,6 +20,9 @@ impl GeminiClient {
             .post("https://generativelanguage.googleapis.com/v1beta/models/gemini-2.0-flash:generateContent")
             .query(&[("key", &self.api_key)])
             .json(&json!({
+                "generationConfig": {
+                    "responseMimeType": "application/json",
+                },
                 "system_instruction": {
                     "parts": [{
                         "text": system_prompt
