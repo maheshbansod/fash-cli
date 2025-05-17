@@ -1,4 +1,5 @@
 use std::error::Error;
+use std::process::Stdio;
 use tokio::process::Command;
 
 use crate::config::Config;
@@ -59,10 +60,61 @@ impl Agent {
             for part in response {
                 match part {
                     TaskPart::Run {command} => {
-                        let output = Command::new("sh").arg("-c").arg(command.clone()).output().await?;
-                        let command_output = String::from_utf8(output.stdout).unwrap();
-                        println!("[Run] {}", command);
-                        user_response.push_str(&format!("The output of the command `{}` is:\n```\n{}\n```", command, command_output));
+use std::io::{BufRead, BufReader};
+use std::process::{Command, Stdio};
+
+let mut child = Command::new("sh")
+    .arg("-c")
+    .arg(command.clone())
+    .stdin(Stdio::inherit())
+    .stdout(Stdio::piped())
+    .stderr(Stdio::piped())
+    .spawn()?;
+
+let stdout = child.stdout.take().unwrap();
+let stderr = child.stderr.take().unwrap();
+
+let mut output = String::new();
+let mut error = String::new();
+
+// Read stdout
+let stdout_handle = std::thread::spawn({
+    let mut out = output.clone();
+    move || {
+        let reader = BufReader::new(stdout);
+        for line in reader.lines() {
+            let line = line.unwrap();
+            println!("{}", line);
+            out.push_str(&line);
+            out.push('\n');
+        }
+        out
+    }
+});
+
+// Read stderr
+let stderr_handle = std::thread::spawn({
+    let mut err = error.clone();
+    move || {
+        let reader = BufReader::new(stderr);
+        for line in reader.lines() {
+            let line = line.unwrap();
+            eprintln!("{}", line);
+            err.push_str(&line);
+            err.push('\n');
+        }
+        err
+    }
+});
+
+let status = child.wait()?;
+let output = stdout_handle.join().unwrap();
+let error = stderr_handle.join().unwrap();
+
+                        user_response.push_str(&format!("The output of the command `{}` is:\n```\n{}\n```", command, output));
+                        user_response.push_str(&format!("The error of the command `{}` is:\n```\n{}\n```", command, error));
+                        user_response.push_str(&format!("The status of the command `{}` is:\n```\n{}\n```", command, status));
+
                     }
                     TaskPart::Message { text } => {
                         println!("[Message] {}", text);
