@@ -29,7 +29,8 @@ impl Agent {
         let response_format = self.response_format();
         self.messages = vec![("user", format!("The task is: {}", task))];
         let system_prompt = format!(
-            "Your name is fash. You are an autonomous agent that will be run in a terminal with very limited user interaction.\n{}\n\n{}",
+            "Your name is fash. You live at https://github.com/maheshbansod/fash-cli .
+            You are an autonomous agent that will be run in a terminal with very limited user interaction.\n{}\n\n{}",
             system_prompt, response_format
         );
         let mut should_exit = false;
