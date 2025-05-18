@@ -29,23 +29,3 @@ pub enum TaskPart {
         reason: String,
     },
 }
-
-#[derive(Debug, Deserialize)]
-pub struct FileWriteAdd {
-    pub path: String,
-    pub content: String,
-    pub start: u32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct FileWriteReplace {
-    pub path: String,
-    pub content: String,
-    pub start: u32,
-    pub end: u32,
-}
-
-#[derive(Debug, Deserialize)]
-pub struct FileRead {
-    pub path: String,
-}

@@ -1,6 +1,4 @@
 use std::error::Error;
-use std::process::Stdio;
-use tokio::process::Command;
 
 use crate::config::Config;
 use crate::gemini::GeminiClient;
@@ -42,18 +40,18 @@ impl Agent {
                 .await?;
             // println!("[Response] {}", response);
             // remove the first line of response if it starts with ``` and also remove the last ``` in the response
-            let response = if response.starts_with("```json") {
-                response[7..].to_string()
+            let response = if let Some(stripped) = response.strip_prefix("```json") {
+                stripped.to_string()
             } else {
                 response
             };
-            let response = if response.starts_with("```") {
-                response[3..].to_string()
+            let response = if let Some(stripped) = response.strip_prefix("```") {
+                stripped.to_string()
             } else {
                 response
             };
-            let response = if response.ends_with("```") {
-                response[..response.len() - 3].to_string()
+            let response = if let Some(stripped) = response.strip_suffix("```") {
+                stripped.to_string()
             } else {
                 response
             };
@@ -78,8 +76,8 @@ impl Agent {
                         let stdout = child.stdout.take().unwrap();
                         let stderr = child.stderr.take().unwrap();
 
-                        let mut output = String::new();
-                        let mut error = String::new();
+                        let output = String::new();
+                        let error = String::new();
 
                         // Read stdout
                         let stdout_handle = std::thread::spawn({
@@ -165,9 +163,9 @@ impl Agent {
                             let mut lines = file_content.lines().collect::<Vec<_>>();
                             lines.insert(start as usize, &content);
                             let content = lines.join("\n");
-                            std::fs::write(&path.clone(), content).unwrap();
+                            std::fs::write(path.clone(), content).unwrap();
                         } else {
-                            std::fs::write(&path.clone(), content.clone()).unwrap();
+                            std::fs::write(path.clone(), content.clone()).unwrap();
                         }
                     }
                     TaskPart::FileWriteReplace {
@@ -185,13 +183,12 @@ impl Agent {
                         lines.drain(start..end);
                         lines.insert(start, &content);
                         let content = lines.join("\n");
-                        std::fs::write(&path.clone(), content).unwrap();
+                        std::fs::write(path.clone(), content).unwrap();
                     }
                     TaskPart::End { reason } => {
                         println!("[End] {}", reason);
                         should_exit = true;
                     }
-                    _ => todo!(),
                 }
             }
             if !user_response.is_empty() {
@@ -206,12 +203,11 @@ impl Agent {
 
     fn parse_response(&self, response: &str) -> Vec<TaskPart> {
         let response = response.replace("```json", "").replace("```", "");
-        let response = serde_json::from_str::<Vec<TaskPart>>(&response).unwrap();
-        response
+        serde_json::from_str::<Vec<TaskPart>>(&response).unwrap()
     }
 
     fn response_format(&self) -> String {
-        format!("
+        "
 
         The user is another agent that forwards you the task.
         You need to complete the task provided by the user.
@@ -322,6 +318,6 @@ impl Agent {
         You can check the README.md file of a project to understand a project.
 
         There is literally nothing you can't do.
-        ")
+        ".to_string()
     }
 }
