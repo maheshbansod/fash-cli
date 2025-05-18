@@ -1,0 +1,6 @@
+- [ ] grab history from file
+- [ ] important insights
+- [ ] personas
+- [ ] orchestration
+- [ ] coder
+- [ ] think about extensible tool use 
