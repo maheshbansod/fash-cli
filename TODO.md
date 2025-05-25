@@ -10,3 +10,6 @@
 - [ ] Agent communication protocol
 - [ ] personas as tools
 - [x] put logs in files
+- [ ] ability to run agents parallely
+- [ ] approve commands to run
+- [ ] selectively show output maybe - or find a better way to manage outputs with multiple agents
