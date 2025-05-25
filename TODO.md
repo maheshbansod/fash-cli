@@ -9,3 +9,4 @@
 - [ ] A2A
 - [ ] Agent communication protocol
 - [ ] personas as tools
+- [x] put logs in files

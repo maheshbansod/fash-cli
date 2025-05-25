@@ -1,5 +1,7 @@
 use std::error::Error;
 
+use tracing::{info, instrument};
+
 use crate::agent_tool::AgentTool;
 use crate::config::Config;
 use crate::gemini::GeminiClient;
@@ -66,6 +68,7 @@ impl Agent {
         Ok(())
     }
 
+    #[instrument]
     pub async fn run(&mut self, task: &str) -> Result<(), Box<dyn Error>> {
         let system_prompt = self.config.get_system_prompt();
         let response_format = self.response_format();
@@ -94,14 +97,12 @@ You are an autonomous agent that will be run in a terminal with very limited use
                 format!("You can use the following tools:\n{}", self.tools.iter().map(|tool| format!("{}\n{}\nCommand: {}", tool.name(), tool.description(), tool.execution_command())).collect::<Vec<String>>().join("\n\n"))
             }
         );
-        println!("{}", system_prompt);
         let mut should_exit = false;
         while !should_exit {
             let response = self
                 .client
                 .generate_content(&self.messages, &system_prompt)
                 .await?;
-            // println!("[Response] {}", response);
             // remove the first line of response if it starts with ``` and also remove the last ``` in the response
             let response = if let Some(stripped) = response.strip_prefix("```json") {
                 stripped.to_string()
@@ -118,7 +119,8 @@ You are an autonomous agent that will be run in a terminal with very limited use
             } else {
                 response
             };
-            println!("[Response] {}", response);
+            // TODO: this should be debug log
+            info!("[Response] {}", response);
             self.messages.push(("model", response.clone()));
             let response = self.parse_response(&response);
             let mut user_response = String::new();
@@ -190,13 +192,14 @@ You are an autonomous agent that will be run in a terminal with very limited use
                         ));
                     }
                     TaskPart::Message { text } => {
-                        println!("[Message] {}", text);
+                        info!("[Message] {}", text);
+                        println!("Bot: {}", text);
                     }
                     TaskPart::Reason { text } => {
-                        println!("[Reason] {}", text);
+                        info!("[Reason] {}", text);
                     }
                     TaskPart::FileRead { path } => {
-                        println!("[File read] {}", path);
+                        info!("[File read] {}", path);
                         if let Ok(content) = std::fs::read_to_string(path.clone()) {
                             let content = content
                                 .lines()
@@ -204,7 +207,7 @@ You are an autonomous agent that will be run in a terminal with very limited use
                                 .map(|(line_number, line)| format!("{}: {}", line_number + 1, line))
                                 .collect::<Vec<String>>()
                                 .join("\n");
-                            println!("[Content] {}", content);
+                            info!("[Content] {}", content);
                             user_response.push_str(&format!(
                                 "The content of the file `{}` is:\n```\n{}\n```",
                                 path.clone(),
@@ -220,8 +223,8 @@ You are an autonomous agent that will be run in a terminal with very limited use
                         content,
                         start,
                     } => {
-                        println!("[FileWriteAdd] {} at {}", path, start);
-                        println!("[Content] {}", content);
+                        info!("[FileWriteAdd] {} at {}", path, start);
+                        info!("[Content] {}", content);
                         if let Ok(file_content) = std::fs::read_to_string(path.clone()) {
                             let mut lines = file_content.lines().collect::<Vec<_>>();
                             lines.insert(start as usize, &content);
@@ -237,8 +240,8 @@ You are an autonomous agent that will be run in a terminal with very limited use
                         start,
                         end,
                     } => {
-                        println!("[FileWriteReplace] {} at {} to {}", path, start, end);
-                        println!("[Content] {}", content);
+                        info!("[FileWriteReplace] {} at {} to {}", path, start, end);
+                        info!("[Content] {}", content);
                         let file_content = std::fs::read_to_string(path.clone()).unwrap();
                         let mut lines = file_content.lines().collect::<Vec<_>>();
                         let start = if start == 0 { 0 } else { start as usize - 1 };
@@ -249,7 +252,7 @@ You are an autonomous agent that will be run in a terminal with very limited use
                         std::fs::write(path.clone(), content).unwrap();
                     }
                     TaskPart::End { reason } => {
-                        println!("[End] {}", reason);
+                        info!("[End] {}", reason);
                         should_exit = true;
                     }
                 }
@@ -382,5 +385,11 @@ You are an autonomous agent that will be run in a terminal with very limited use
 
         There is literally nothing you can't do.
         ".to_string()
+    }
+}
+
+impl std::fmt::Debug for Agent {
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        write!(f, "<Agent>")
     }
 }
