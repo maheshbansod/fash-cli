@@ -5,3 +5,7 @@
 - [ ] coder
 - [ ] think about extensible tool use 
 - [ ] add default personas creation scripts
+- [ ] MCP
+- [ ] A2A
+- [ ] Agent communication protocol
+- [ ] personas as tools
