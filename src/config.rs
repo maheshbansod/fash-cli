@@ -1,12 +1,19 @@
+use directories::ProjectDirs;
 use serde::Deserialize;
-use std::fs;
+use std::{fs, path::PathBuf};
 
 pub const ORG_NAME: &str = "light";
 pub const APP_NAME: &str = "Fash CLI";
 
-#[derive(Deserialize, Debug, Default)]
+#[derive(Deserialize, Default, Debug)]
+struct ConfigRaw {
+    system_prompt: Option<SystemPrompt>,
+}
+
+#[derive(Debug)]
 pub struct Config {
     pub system_prompt: Option<SystemPrompt>,
+    proj_dirs: ProjectDirs,
 }
 
 #[derive(Deserialize, Debug)]
@@ -27,20 +34,30 @@ impl Config {
         let config_dir = proj_dirs.config_dir();
         let config_path = config_dir.join("config.toml");
 
-        if !config_path.exists() {
-            return Config::default();
-        }
-
-        match fs::read_to_string(&config_path) {
-            Ok(content) => toml::from_str(&content).unwrap_or_else(|e| {
-                eprintln!("Warning: Failed to parse config file: {}", e);
-                Config::default()
-            }),
-            Err(e) => {
-                eprintln!("Warning: Failed to read config file: {}", e);
-                Config::default()
+        let config_raw = {
+            if !config_path.exists() {
+                ConfigRaw::default()
+            } else {
+                match fs::read_to_string(&config_path) {
+                    Ok(content) => toml::from_str(&content).unwrap_or_else(|e| {
+                        eprintln!("Warning: Failed to parse config file: {}", e);
+                        ConfigRaw::default()
+                    }),
+                    Err(e) => {
+                        eprintln!("Warning: Failed to read config file: {}", e);
+                        ConfigRaw::default()
+                    }
+                }
             }
+        };
+        Config {
+            system_prompt: config_raw.system_prompt,
+            proj_dirs,
         }
+    }
+
+    pub fn persona_dir(&self) -> PathBuf {
+        self.proj_dirs.data_dir().join("personas")
     }
 
     pub fn get_system_prompt(&self) -> String {

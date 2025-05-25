@@ -2,6 +2,7 @@ use std::error::Error;
 
 use crate::config::Config;
 use crate::gemini::GeminiClient;
+use crate::persona::Persona;
 use crate::task_part::TaskPart;
 
 type Message = (&'static str, String);
@@ -9,6 +10,7 @@ type Message = (&'static str, String);
 pub struct Agent {
     config: Config,
     client: GeminiClient,
+    persona: Option<Persona>,
     messages: Vec<Message>,
 }
 
@@ -20,8 +22,19 @@ impl Agent {
         Self {
             config,
             client,
+            persona: None,
             messages: vec![],
         }
+    }
+
+    pub fn set_persona(&mut self, persona: Option<String>) -> Result<(), Box<dyn Error>> {
+        if let Some(persona) = persona {
+            let persona_dir = self.config.persona_dir();
+            let persona_file_path = persona_dir.join(persona);
+            let persona = Persona::load(&persona_file_path)?;
+            self.persona = Some(persona);
+        }
+        Ok(())
     }
 
     pub async fn run(&mut self, task: &str) -> Result<(), Box<dyn Error>> {
@@ -29,9 +42,23 @@ impl Agent {
         let response_format = self.response_format();
         self.messages = vec![("user", format!("The task is: {}", task))];
         let system_prompt = format!(
-            "Your name is fash. You live at https://github.com/maheshbansod/fash-cli .
-            You are an autonomous agent that will be run in a terminal with very limited user interaction.\n{}\n\n{}",
-            system_prompt, response_format
+            "You are an instance of fash. You live at https://github.com/maheshbansod/fash-cli .
+            You are an autonomous agent that will be run in a terminal with very limited user interaction.
+            
+            {}
+
+            {}
+            
+            {}",
+            system_prompt,
+            if let Some(persona) = &self.persona {
+                format!("The persona you need to adopt is:
+                {} - {}
+                {}", persona.name(), persona.description(), persona.instructions())
+            } else {
+                String::new()
+            },
+            response_format
         );
         let mut should_exit = false;
         while !should_exit {

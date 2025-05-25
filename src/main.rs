@@ -2,6 +2,7 @@ mod agent;
 mod cli;
 mod config;
 mod gemini;
+mod persona;
 mod task_part;
 
 use crate::agent::Agent;
@@ -16,6 +17,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
     // Parse args and get task
     let args = Args::parse();
     let task = args.get_task()?;
+    let persona = args.persona;
 
     // Get API key from environment
     let api_key =
@@ -23,6 +25,7 @@ async fn main() -> Result<(), Box<dyn std::error::Error>> {
 
     // Initialize agent and run task
     let mut agent = Agent::new(api_key);
+    agent.set_persona(persona)?;
     agent.run(&task).await?;
 
     Ok(())

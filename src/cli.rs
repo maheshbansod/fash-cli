@@ -7,6 +7,9 @@ pub struct Args {
     /// The task to send to Gemini
     #[arg(short, long)]
     pub task: Option<String>,
+    /// The persona to use for the task
+    #[arg(short, long)]
+    pub persona: Option<String>,
 }
 
 impl Args {
