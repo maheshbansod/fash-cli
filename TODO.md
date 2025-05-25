@@ -1,6 +1,7 @@
 - [ ] grab history from file
 - [ ] important insights
-- [ ] personas
+- [x] personas
 - [ ] orchestration
 - [ ] coder
 - [ ] think about extensible tool use 
+- [ ] add default personas creation scripts
