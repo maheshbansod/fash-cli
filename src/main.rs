@@ -1,4 +1,5 @@
 mod agent;
+mod agent_tool;
 mod cli;
 mod config;
 mod gemini;

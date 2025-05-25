@@ -10,6 +10,7 @@ pub struct Persona {
     name: String,
     description: String,
     instructions: String,
+    allow_personas_as_tools: Option<bool>,
 }
 
 impl Persona {
@@ -36,5 +37,9 @@ impl Persona {
     
     pub fn instructions(&self) -> &str {
         &self.instructions
+    }
+
+    pub fn allow_personas_as_tools(&self) -> bool {
+        self.allow_personas_as_tools.unwrap_or(false)
     }
 }
