@@ -47,20 +47,22 @@ impl Agent {
                     }
                     let persona_file = persona_file.unwrap();
                     let persona_file_path = persona_file.path();
-                    let persona_file_name = persona_file_path.file_stem().unwrap().to_str().unwrap();
+                    let persona_file_name =
+                        persona_file_path.file_stem().unwrap().to_str().unwrap();
                     if persona_file_name.starts_with(".") {
                         continue;
                     }
                     // i should cache this somehow i think
                     let persona = Persona::load(&persona_file_path)?;
-                    self.tools.push(
-                        AgentTool::new(
-                            persona.name(),
-                            persona.description(),
-                            // i should make this command dynamic -> agent-base can't always be the binary name
-                            &format!("agent-base --persona {} --task \"<task>\"", persona_file_name)
-                        )
-                    );
+                    self.tools.push(AgentTool::new(
+                        persona.name(),
+                        persona.description(),
+                        // i should make this command dynamic -> agent-base can't always be the binary name
+                        &format!(
+                            "agent-base --persona {} --task \"<task>\"",
+                            persona_file_name
+                        ),
+                    ));
                 }
             }
             self.persona = Some(persona);
@@ -74,7 +76,7 @@ impl Agent {
         let response_format = self.response_format();
         self.messages = vec![("user", format!("The task is: {}", task))];
         let system_prompt = format!(
-"You are an instance of fash. You live at https://github.com/maheshbansod/fash-cli .
+            "You are an instance of fash. You live at https://github.com/maheshbansod/fash-cli .
 You are an autonomous agent that will be run in a terminal with very limited user interaction.
 
 {system_prompt}
@@ -85,16 +87,33 @@ You are an autonomous agent that will be run in a terminal with very limited use
 
 {}",
             if let Some(persona) = &self.persona {
-                format!("The persona you need to adopt is:
+                format!(
+                    "The persona you need to adopt is:
 {} - {}
-{}", persona.name(), persona.description(), persona.instructions())
+{}",
+                    persona.name(),
+                    persona.description(),
+                    persona.instructions()
+                )
             } else {
                 String::new()
             },
             if self.tools.is_empty() {
                 String::new()
             } else {
-                format!("You can use the following tools:\n{}", self.tools.iter().map(|tool| format!("{}\n{}\nCommand: {}", tool.name(), tool.description(), tool.execution_command())).collect::<Vec<String>>().join("\n\n"))
+                format!(
+                    "You can use the following tools:\n{}",
+                    self.tools
+                        .iter()
+                        .map(|tool| format!(
+                            "{}\n{}\nCommand: {}",
+                            tool.name(),
+                            tool.description(),
+                            tool.execution_command()
+                        ))
+                        .collect::<Vec<String>>()
+                        .join("\n\n")
+                )
             }
         );
         let mut should_exit = false;
@@ -393,3 +412,4 @@ impl std::fmt::Debug for Agent {
         write!(f, "<Agent>")
     }
 }
+
